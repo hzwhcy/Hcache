@@ -2,7 +2,7 @@ package lru
 
 import "container/list"
 
-type cache struct {
+type Cache struct {
 	capacity  int64
 	size      int64
 	l         *list.List
@@ -18,8 +18,8 @@ type entry struct {
 }
 
 // New 新建一个缓存
-func New(capacity int64, onEvicted func(key string, value Value)) *cache {
-	return &cache{
+func New(capacity int64, onEvicted func(key string, value Value)) *Cache {
+	return &Cache{
 		capacity:  capacity,
 		l:         list.New(),
 		cache:     make(map[string]*list.Element),
@@ -28,7 +28,7 @@ func New(capacity int64, onEvicted func(key string, value Value)) *cache {
 }
 
 // Add 增加一个元素
-func (c *cache) Add(key string, value Value) {
+func (c *Cache) Add(key string, value Value) {
 	if val, ok := c.cache[key]; ok {
 		c.l.MoveToFront(val)
 		entryVal := val.Value.(*entry)
@@ -44,7 +44,7 @@ func (c *cache) Add(key string, value Value) {
 	}
 }
 
-func (c *cache) RemoveOldest() {
+func (c *Cache) RemoveOldest() {
 	ele := c.l.Back()
 	if ele != nil {
 		c.l.Remove(ele)
@@ -57,7 +57,7 @@ func (c *cache) RemoveOldest() {
 	}
 }
 
-func (c *cache) Get(key string) (value Value, ok bool) {
+func (c *Cache) Get(key string) (value Value, ok bool) {
 	if ele, ok := c.cache[key]; ok {
 		c.l.MoveToFront(ele)
 		kv := ele.Value.(*entry)
