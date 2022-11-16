@@ -35,8 +35,8 @@ func (c *Cache) Add(key string, value Value) {
 		c.size += int64(value.Len()) - int64(entryVal.value.Len())
 		entryVal.value = value
 	} else {
-		ele := c.l.PushFront(&entry{key, value})
-		c.cache[key] = ele
+		val := c.l.PushFront(&entry{key, value})
+		c.cache[key] = val
 		c.size += int64(len(key)) + int64(value.Len())
 	}
 	for c.capacity != 0 && c.capacity < c.size {
