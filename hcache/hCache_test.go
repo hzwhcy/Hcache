@@ -1,4 +1,4 @@
-package HCache
+package hcache
 
 import (
 	"fmt"

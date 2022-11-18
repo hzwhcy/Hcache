@@ -1,4 +1,4 @@
-package HCache
+package hcache
 
 type ByteView struct {
 	b []byte

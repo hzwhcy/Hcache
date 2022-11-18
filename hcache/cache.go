@@ -1,7 +1,7 @@
-package HCache
+package hcache
 
 import (
-	"HCache/elimination/lru"
+	"HCache/hcache/elimination/lru"
 	"sync"
 )
 
