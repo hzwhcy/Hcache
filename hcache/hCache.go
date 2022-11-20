@@ -1,6 +1,7 @@
 package hcache
 
 import (
+	"HCache/hcache/singleflight"
 	"fmt"
 	"log"
 	"sync"
@@ -20,6 +21,8 @@ type Group struct {
 	name      string
 	getter    Getter
 	mainCache cache
+	peers     PeerPicker
+	loader    *singleflight.Group
 }
 
 var (
@@ -37,6 +40,7 @@ func NewGroup(name string, getter Getter, cacheSize int64) *Group {
 		name:      name,
 		getter:    getter,
 		mainCache: cache{cacheSize: cacheSize},
+		loader:    &singleflight.Group{},
 	}
 	groups[name] = g
 	return g
@@ -62,8 +66,22 @@ func (g *Group) Get(key string) (ByteView, error) {
 	return g.load(key)
 }
 
-func (g *Group) load(key string) (ByteView, error) {
-	return g.getLocally(key)
+func (g *Group) load(key string) (value ByteView, err error) {
+	view, err := g.loader.Do(key, func() (interface{}, error) {
+		if g.peers != nil {
+			if peer, ok := g.peers.PickPeer(key); ok {
+				if value, err = g.getFromPeer(peer, key); err == nil {
+					return value, nil
+				}
+				log.Println("[GeeCache] Failed to get from peer", err)
+			}
+		}
+		return g.getLocally(key)
+	})
+	if err == nil {
+		return view.(ByteView), nil
+	}
+	return
 }
 
 func (g *Group) getLocally(key string) (ByteView, error) {
@@ -78,4 +96,19 @@ func (g *Group) getLocally(key string) (ByteView, error) {
 
 func (g *Group) addToCache(key string, value ByteView) {
 	g.mainCache.add(key, value)
+}
+
+func (g *Group) RegisterPeers(peers PeerPicker) {
+	if g.peers != nil {
+		panic("RegisterPeerPicker called more than once")
+	}
+	g.peers = peers
+}
+
+func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
+	bytes, err := peer.Get(g.name, key)
+	if err != nil {
+		return ByteView{}, err
+	}
+	return ByteView{b: bytes}, nil
 }
